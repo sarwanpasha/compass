@@ -1,0 +1,36 @@
+Part 1. Closed-form accuracy against Monte Carlo (20,000 replicates each)
+ k    r  c  AUC_seq  sim_data  thm2  sim_abs  thm2_abs  sim_comb  thm3
+ 2 0.90  3     0.70     0.752 0.749    0.751     0.748     0.802 0.803
+ 5 0.80  5     0.70     0.838 0.839    0.838     0.839     0.863 0.861
+ 5 0.95  5     0.75     0.537 0.532    0.537     0.532     0.642 0.644
+10 0.99  8     0.70     0.277 0.280    0.277     0.280     0.368 0.370
+25 0.50  3     0.65     0.567 0.565    0.561     0.559     0.589 0.589
+ 5 1.00  5     0.70     0.200 0.200    0.200     0.200     0.407 0.410
+maximum absolute error: 0.004
+Theorem 1, c=4.0, r=0.9: simulated |z| rule 0.816, closed form 0.814
+Corollary 1: AUC 0.70, c=5, 1-|r|=1e-3 -> n_eff/n = 23.0
+
+Part 2. SR-FM and conformal sets on 3,000 simulated credible sets
+empirical Bayes temperature lambda = 0.90
+   score  top1  within_set_AUC
+     PIP 0.577           0.840
+Sequence 0.256           0.722
+   SR-FM 0.631           0.887
+
+Quadrature law by LD stratum (within-set AUC)
+ ld_r  n_sets  auc_pip  auc_seq  auc_srfm  predicted
+0.500     509    1.000    0.725     1.000      1.000
+0.800     477    0.985    0.718     0.988      0.988
+0.900     520    0.931    0.732     0.944      0.946
+0.950     472    0.876    0.726     0.901      0.903
+0.990     518    0.689    0.719     0.782      0.777
+0.999     504    0.570    0.709     0.713      0.718
+
+Split-conformal sets (calibrate on even sets, test on odd, and the reverse)
+ target score  coverage  mean_size
+    0.8   PIP     0.802      3.132
+    0.8 SR-FM     0.800      2.160
+    0.9   PIP     0.901      4.974
+    0.9 SR-FM     0.901      3.841
+
+finished in 6.2 s; tables written to examples/output
