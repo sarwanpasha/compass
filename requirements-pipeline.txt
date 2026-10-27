@@ -1,0 +1,13 @@
+# real-data pipeline (see pipeline/setup.sh); AlphaGenome needs a separate Python >= 3.12 environment
+torch
+enformer-pytorch
+borzoi-pytorch
+transformers<4.45
+pyfaidx
+pyarrow
+scikit-learn
+statsmodels
+pyliftover
+huggingface_hub
+msprime>=1.0
+stdpopsim>=0.2
