@@ -13,7 +13,7 @@ models = sys.argv[1].split(','); tag = '_'.join(models)
 lab = pd.read_parquet(R + 'mpra_variants_hg38.parquet')[['variant', 'emvar']]
 def features(m):
     metas, locs = [], []
-    for f in sorted(glob.glob(R + f'scores/{m}_*_meta.parquet')):
+    for f in [f for f in sorted(glob.glob(R + f'scores/{m}_*_meta.parquet')) if not f.endswith('_tss_meta.parquet')]:
         mt = pd.read_parquet(f); l = np.load(f.replace('_meta.parquet', '_loc.npy')).astype(np.float32)
         metas.append(mt[mt.ok]); locs.append(l[mt.ok.values])
     M = pd.concat(metas, ignore_index=True); X = np.vstack(locs)

@@ -20,11 +20,13 @@ from common import R, load_haplotypes, region_columns, hap_corr
 
 V = pd.read_parquet(R + "mpra_variants_hg38.parquet")
 T = pd.read_parquet(R + "labeled_cs_members.parquet")
+best = T.drop_duplicates("cs_id").sort_values("sample_size", ascending=False).drop_duplicates("gene_id").cs_id
+T = T[T.cs_id.isin(set(best))]                    # one credible set per gene (largest dataset)
 E = T.merge(V[["variant", "skew"]], on="variant")
-E = E[E.emvar.astype(bool) & E.skew.notna() & (E.skew != 0) & E.z.notna()]
+E = E[E.emvar.astype(bool) & E["skew"].notna() & (E["skew"] != 0) & E.z.notna()]
 out = {}
 
-E["agree"] = np.sign(E.skew) == np.sign(E.z)
+E["agree"] = np.sign(E["skew"]) == np.sign(E.z)
 for name, m in [("pip_gt_0.5", E.pip > 0.5), ("pip_lt_0.1", E.pip < 0.1)]:
     g = E[m].drop_duplicates(["cs_id", "variant"])
     k, n = int(g.agree.sum()), len(g)
@@ -40,7 +42,7 @@ for chrom, Ec in E.groupby("chromosome"):
         if len(g) < 2:
             continue
         Rm, _ = hap_corr(H, [idx[v] for v in g.variant], eur)
-        sk = np.sign(g.skew.values)
+        sk = np.sign(g["skew"].values)
         for a, b in combinations(range(len(g)), 2):
             if np.isfinite(Rm[a, b]) and Rm[a, b] != 0:
                 pairs.append((cs, g.variant.iloc[a], g.variant.iloc[b], Rm[a, b], sk[a], sk[b]))
@@ -52,7 +54,7 @@ out["pairs"] = len(P)
 tight = P[P.absr >= 0.8]
 obs = float(tight.concordant.mean())
 rng = np.random.default_rng(0)
-signs = dict(zip(E.variant, np.sign(E.skew)))
+signs = dict(zip(E.variant, np.sign(E["skew"])))
 keys = np.array(list(signs))
 null = []
 for _ in range(1000):

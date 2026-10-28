@@ -42,6 +42,8 @@ def load_haplotypes(chrom, positions, tmp_tag="q"):
     H has shape (n_variants, n_samples, 2) with int8 alleles.
     """
     c = str(chrom).replace("chr", "")
+    if not os.path.exists(bcf_path(c)):                      # e.g. chrX: no phased panel available
+        return {}, np.zeros((0, 0, 2), np.int8)
     reg = os.path.join(R, f"tmp_{tmp_tag}_chr{c}.tsv")
     pd.DataFrame({"c": f"chr{c}", "p": sorted(set(int(p) for p in positions))}).to_csv(
         reg, sep="\t", header=False, index=False)
@@ -64,6 +66,8 @@ def load_haplotypes(chrom, positions, tmp_tag="q"):
 
 def region_columns(chrom, regions=REGIONS):
     """Column indices of unrelated samples from each genetic region in the BCF."""
+    if not os.path.exists(bcf_path(chrom)):
+        return {g: np.array([], int) for g in regions}
     meta = sample_table()
     pos = {s: i for i, s in enumerate(bcf_samples(chrom))}
     return {g: np.array([pos[s] for s in meta[meta.region == g].s if s in pos]) for g in regions}

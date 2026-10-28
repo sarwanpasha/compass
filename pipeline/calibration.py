@@ -19,7 +19,7 @@ import pandas as pd
 from common import R, D, load_haplotypes, sample_table, bcf_samples
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
-from compass.theory import expected_max_pip, kappa_transform  # noqa: E402
+from compass.theory import expected_max_pip, kappa_transform, c_debiased  # noqa: E402
 
 KAPPAS = [1.0, 0.5, 0.3, 0.2, 0.1, 0.05]
 N_DRAWS = 300
@@ -42,6 +42,8 @@ geu = set(M7[M7.study_label == "GEUVADIS"].dataset_id)
 A = C7[C7.dataset_id.isin(geu) & (C7.chromosome.astype(str) == c)].assign(src="geuv")
 B = pd.read_parquet(D + "eqtlcat/cs_ge_r8b.parquet", columns=COLS)
 B = B[(B.dataset_id == "QTD000764") & (B.chromosome.astype(str) == c)].assign(src="mage")
+M8 = pd.read_csv(D + "eqtlcat/dataset_metadata_r8_beta.tsv", sep="\t")
+NSIZE = {**dict(zip(M7.dataset_id, M7.sample_size)), **dict(zip(M8.dataset_id, M8.sample_size))}
 X = pd.concat([A, B])
 X = X[X.cs_size.between(2, 60)]
 
@@ -54,7 +56,9 @@ for (src, cs), g in X.groupby(["src", "cs_id"]):
         continue
     vs = list(g.variant)
     zz = abs(g.z.iloc[0])
-    rec = dict(src=src, cs_id=cs, k=len(vs), lead_pip=float(g.pip.iloc[0]), lead_z=float(zz))
+    nn = float(NSIZE.get(g.dataset_id.iloc[0], np.nan))
+    zadj = zz * np.sqrt((nn - 1) / (zz * zz + nn - 2)) if np.isfinite(nn) else zz
+    rec = dict(src=src, cs_id=cs, k=len(vs), lead_pip=float(g.pip.iloc[0]), lead_z=float(zz), n=nn, lead_z_adj=float(zadj))
     for grp in ([f"{src}_insample", "eur_ref"]):
         Hs = H[[idx[v] for v in vs]][:, cols[grp]].reshape(len(vs), -1).astype(np.float32)
         sd = Hs.std(1)
@@ -64,12 +68,16 @@ for (src, cs), g in X.groupby(["src", "cs_id"]):
         Rm = Zs @ Zs.T / Zs.shape[1]
         key = "insample" if grp != "eur_ref" else "eurref"
         rec[f"rmax_{key}"] = float(np.abs(Rm[0, 1:]).max())
+        cdb = c_debiased(zz, Rm, rng=rng)
+        rec[f"c_debiased_{key}"] = cdb
+        rec[f"pred_maxpip_{key}_debiased"] = expected_max_pip(cdb, Rm, n_draws=N_DRAWS, rng=rng, prior_var=max(zz * zz, 1.0))[0]
         for kap in KAPPAS:
             Rk = Rm if kap == 1.0 else kappa_transform(Rm, kap)
             mp, t1 = expected_max_pip(zz, Rk, n_draws=N_DRAWS, rng=rng)
             sfx = "" if kap == 1.0 else f"_k{kap}"
             rec[f"pred_maxpip_{key}{sfx}"] = mp
             rec[f"pred_top1_{key}{sfx}"] = t1
+            rec[f"pred_maxpip_{key}_adj{sfx}"] = expected_max_pip(zadj, Rk, n_draws=N_DRAWS, rng=rng, prior_var=max(zadj * zadj, 1.0))[0]
     out.append(rec)
 pd.DataFrame(out).to_parquet(R + f"calib/chr{c}.parquet")
 print("chr", c, len(out))
