@@ -154,6 +154,9 @@ D["in_set"] = cp.conformal_sets(D.srfm, D.cs_id, tau)
 - `cp.combined_snr(a, b, rho)`: combines two evidence channels, including correlated ones.
 - `cp.neff_ratio(auc, c, r)`: the sample size a sequence model is worth.
 - `cp.expected_max_pip(z_lead, R)` and `cp.kappa_transform(R, kappa)`: calibration against observed PIPs.
+- `cp.c_required(r, target)` and `cp.n_required(z, n, r)`: the non-centrality and sample size a signal needs to reach a target accuracy.
+- `cp.multiancestry_snr(c, r, mu)`: separation when studies in several populations are combined.
+- `cp.susie_rss(z, R, n)`: a compact SuSiE-RSS implementation that matches `susieR::susie_rss` (see `simulations/validate_susie.py`).
 
 ## Reproducing the analyses
 
@@ -166,6 +169,15 @@ python simulations/individual_level.py --loci 30000 --seed 8 --out results/il_b.
 python simulations/individual_level_summary.py --loci results/il_a.pkl
 python simulations/pairs_em.py results/il_a.pkl results/il_b.pkl              # pairwise tests and lambda recovery
 python simulations/coalescent.py --out results/coalescent.csv                 # needs msprime and stdpopsim
+python simulations/lambda_mu.py results/lambda_mu.csv                          # empirical Bayes temperature vs mu / sigma_w
+```
+
+With the real-data inputs in place (`COMPASS_DIR`, see below), two further simulations use real EUR genotypes:
+
+```bash
+python simulations/validate_susie.py results/validate_susie.tsv               # compass.susie_rss against susieR::susie_rss
+python simulations/kappa_mechanisms.py 22 60 results/kappa_sim/chr22.parquet  # one autosome; needs R with susieR
+python simulations/kappa_summary.py "results/kappa_sim/chr*.parquet" results/kappa_summary.json
 ```
 
 ### Real data
@@ -196,9 +208,12 @@ bash pipeline/run_slurm.sh   # submits all jobs (names compass_*)
 | `build_sets.py` | reporter-assay labels; replication and multi-ancestry truths; variants to score | `truth_*_fullsets.parquet`, `to_score_all.parquet` |
 | `score_model.py`, `score_alphagenome.py` | variant-effect scoring (SNVs and indels) | `scores/*` |
 | `benchmark.py MODELS` | reporter-assay and full-set benchmarks, SR-FM, LD strata, conformal sets, two-channel test | `bench2_*.json`, `features_*.parquet` |
+| `ld_truthsets.py` | LD between the causal variant and other members of each benchmark set (EUR-irreducible class) | `truthsets_ld.parquet` |
+| `benchmark_v2.py MODEL` | SR-FM against supervised, fiPIP-style, EMS-style and multi-annotation baselines; donor-independent and strict truths; strata; channel models; conformal transfer | `bench_v2_*.json` |
+| `mpra_v2.py` | reporter-assay AUC by LD, between-set enrichment, tested vs untested members, cell-type matching | `mpra_v2.json` |
 | `semisynthetic.py` | real LD and real sequence channel with simulated z | `semisynthetic_enformer.json` |
-| `atlas.py`, `atlas_summary.py`, `gwas_prep.py` | resolution atlas for eQTL and GWAS signals | `atlas_*_summary.json` |
-| `calibration.py`, `calibration_summary.py` | theory against SuSiE with in-sample and reference LD, effective resolution κ | `calibration.json` |
+| `atlas.py`, `atlas_summary.py`, `gwas_prep.py` | resolution atlas: near-perfect LD by region, required sample size, panel downsampling, LD clumps, multi-ancestry designs | `atlas_*_summary.json` |
+| `calibration.py`, `calibration_summary.py` | theory against SuSiE with in-sample and reference LD, finite-sample adjustment, effective resolution κ | `calibration.json` |
 | `reporter_direction.py` | direction of reporter effects and haplotype concordance | `reporter_direction.json` |
 
 Sequence-model scoring is the most expensive step and runs as eight array tasks per model. All other steps run on CPUs; the atlas and calibration jobs run per chromosome.
