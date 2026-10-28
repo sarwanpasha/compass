@@ -1,5 +1,6 @@
 """COMPASS: resolution theory, sequence-resolved fine-mapping and conformal credible sets."""
-from . import theory, srfm, conformal, metrics  # noqa: F401
+from . import theory, srfm, conformal, metrics, susie  # noqa: F401
+from .susie import susie_rss  # noqa: F401
 from .theory import *  # noqa: F401,F403
 from .srfm import sequence_score, fit_lambda, srfm_posterior, standardize  # noqa: F401
 from .conformal import conformal_threshold, conformal_sets, evaluate_cross_fit  # noqa: F401
