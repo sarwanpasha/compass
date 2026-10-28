@@ -101,3 +101,13 @@ def test_kappa_transform():
     Rk = cp.kappa_transform(R, 0.2)
     assert abs(Rk[0, 1] - 0.98) < 1e-3
     assert np.allclose(np.diag(Rk), 1)
+
+
+def test_c_required_and_multiancestry():
+    r = np.sqrt(0.99)
+    c = cp.c_required(r, 0.9)
+    assert abs(cp.pairwise_correct_abs(c, r) - 0.9) < 1e-6
+    assert abs(c - 25.6) < 0.1
+    assert np.isinf(cp.c_required(1.0))
+    # two populations with the same c and r equal one population with twice the sample
+    assert abs(cp.multiancestry_snr([5, 5], [0.9, 0.9]) - np.sqrt(2) * 5 * np.sqrt(0.1)) < 1e-12
