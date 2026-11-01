@@ -10,7 +10,8 @@ import numpy as np
 
 from .metrics import group_indices
 
-__all__ = ["conformal_threshold", "conformal_sets", "evaluate_cross_fit"]
+__all__ = ["conformal_threshold", "conformal_sets", "evaluate_cross_fit", "set_scores",
+           "mondrian_thresholds", "weighted_threshold"]
 
 
 def _split(q, truth, groups):
@@ -57,3 +58,35 @@ def evaluate_cross_fit(q, truth, groups, fold, alpha):
             cov.append(bool((keep[m] & tt[m]).any()))
             size.append(int(keep[m].sum()))
     return float(np.mean(cov)), float(np.mean(size))
+
+
+def set_scores(q, truth, groups):
+    """Nonconformity score S_g = 1 - max_{i in T_g} q_i for every set with a known causal variant,
+    in the order of compass.metrics.group_indices."""
+    return np.array([1 - qq[t].max() if t.any() else np.nan for qq, t in _split(q, truth, groups)])
+
+
+def _level(S, alpha):
+    m = len(S)
+    return float(np.quantile(S, min(1.0, np.ceil((m + 1) * (1 - alpha)) / m), method="higher"))
+
+
+def mondrian_thresholds(S, strata, alpha):
+    """Group-conditional (Mondrian) split conformal: one threshold per stratum (for example an LD
+    stratum), which gives coverage of at least 1 - alpha within every stratum."""
+    S, strata = np.asarray(S, float), np.asarray(strata)
+    return {k: _level(S[strata == k], alpha) for k in np.unique(strata)}
+
+
+def weighted_threshold(S, w_cal, w_test, alpha):
+    """Weighted split conformal under covariate shift (likelihood-ratio weights w = dP_test/dP_cal).
+    Returns the (1 - alpha) quantile of sum_i p_i delta_{S_i} + p_test delta_{+inf}, where
+    p_i = w_i / (sum w + w_test). Coverage holds when calibration and test sets differ only in the
+    distribution of the covariates that define w."""
+    S, w = np.asarray(S, float), np.asarray(w_cal, float)
+    o = np.argsort(S)
+    S, w = S[o], w[o]
+    p = np.append(w, w_test) / (w.sum() + w_test)
+    cum = np.cumsum(p[:-1])
+    k = np.searchsorted(cum, 1 - alpha)
+    return float(S[k]) if k < len(S) else np.inf
