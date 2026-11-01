@@ -111,3 +111,17 @@ def test_c_required_and_multiancestry():
     assert np.isinf(cp.c_required(1.0))
     # two populations with the same c and r equal one population with twice the sample
     assert abs(cp.multiancestry_snr([5, 5], [0.9, 0.9]) - np.sqrt(2) * 5 * np.sqrt(0.1)) < 1e-12
+
+
+def test_two_causal_and_design():
+    from compass import design as d
+    R = np.array([[1, .5, .8], [.5, 1, .8], [.8, .8, 1]])
+    assert list(d.phantom_variants(R, [0, 1], [5, 5])) == [2]
+    # single binding partner: all samples go to the population with the largest per-individual separation
+    a = np.array([[1e-4 * 0.001], [1e-4 * 0.05]])
+    N, n = d.optimal_allocation(a, np.zeros(1))
+    assert n[0] == 0 and abs(N - d.required_separation(0.9) / a[1, 0]) < 1e-6
+    # perfect LD in every population: infeasible
+    N, _ = d.optimal_allocation(np.zeros((2, 1)), np.zeros(1))
+    assert np.isinf(N)
+    assert abs(d.c_truncated_mle(10, 5.2) - 10) < 1e-3
