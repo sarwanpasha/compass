@@ -39,3 +39,8 @@ wait
 echo "AlphaGenome weights are distributed under their own terms of use; place the PyTorch weights at"
 echo "  $W/models/alphagenome/model_all_folds.safetensors"
 du -sh "$W"/*
+# ENCODE candidate cis-regulatory elements (registry v4) and DNase peaks (GM12878, HepG2)
+mkdir -p "$W/encode" && cd "$W/encode"
+wget -q -O ccre.bed.gz https://www.encodeproject.org/files/ENCFF420VPZ/@@download/ENCFF420VPZ.bed.gz
+wget -q -O dnase_GM12878.bed.gz https://www.encodeproject.org/files/ENCFF759OLD/@@download/ENCFF759OLD.bed.gz
+wget -q -O dnase_HepG2.bed.gz https://www.encodeproject.org/files/ENCFF748QCZ/@@download/ENCFF748QCZ.bed.gz
