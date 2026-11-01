@@ -158,6 +158,16 @@ D["in_set"] = cp.conformal_sets(D.srfm, D.cs_id, tau)
 - `cp.multiancestry_snr(c, r, mu)`: separation when studies in several populations are combined.
 - `cp.susie_rss(z, R, n)`: a compact SuSiE-RSS implementation that matches `susieR::susie_rss` (see `simulations/validate_susie.py`).
 
+**Design functions (`compass.design`):**
+
+- `mean_z(R, causal, c)` and `rank_prob(eta_u, eta_v, r_uv)`: ranking probabilities with two or more causal variants.
+- `phantom_variants(R, causal, c)`: non-causal variants whose expected z exceeds that of every causal variant (phantom leads).
+- `c_truncated_mle(z, t)`: non-centrality corrected for reporting only |z| >= t.
+- `optimal_allocation(a, S0, tau)`: smallest number of additional individuals, split across populations, that brings every partner to accuracy `tau` (a linear program).
+- `design_signal(z, n0, het, r)`: per-signal design class (resolved, more samples, another ancestry, larger studies, functional evidence only), fold increases and the sequence-model AUC that would resolve the signal now.
+
+**Conformal extensions (`compass.conformal`):** `mondrian_thresholds` (one threshold per stratum, for example LD stratum by set size) and `weighted_threshold` (calibration under covariate shift).
+
 ## Reproducing the analyses
 
 ### Simulations (CPU)
@@ -178,6 +188,8 @@ With the real-data inputs in place (`COMPASS_DIR`, see below), two further simul
 python simulations/validate_susie.py results/validate_susie.tsv               # compass.susie_rss against susieR::susie_rss
 python simulations/kappa_mechanisms.py 22 60 results/kappa_sim/chr22.parquet  # one autosome; needs R with susieR
 python simulations/kappa_summary.py "results/kappa_sim/chr*.parquet" results/kappa_summary.json
+python simulations/two_causal.py 22 12 results/two_causal/chr22.parquet         # two linked causal variants, phantom leads
+python simulations/two_causal_summary.py "results/two_causal/chr*.parquet" results/two_causal_summary.json
 ```
 
 ### Real data
@@ -191,6 +203,7 @@ All inputs are public. The scripts read and write under one working directory se
 | UK Biobank 94-trait SuSiE fine-mapping, release 1.1 | finucanelab.org/data |
 | HGDP+1kG phased haplotypes (GRCh38) and sample metadata | gnomAD public bucket, `resources/hgdp_1kg/phased_haplotypes_v2` |
 | Reporter-assay (MPRA) results | Zenodo record 15297965 |
+| ENCODE candidate cis-regulatory elements and DNase peaks | ENCODE files ENCFF420VPZ, ENCFF759OLD, ENCFF748QCZ |
 | GRCh38 reference and hg19-to-hg38 chain | UCSC |
 | Enformer and Borzoi weights | Hugging Face `EleutherAI/enformer-official-rough`, `johahi/borzoi-replicate-0` |
 | AlphaGenome weights (PyTorch port) | distributed under the AlphaGenome terms of use; place at `data/models/alphagenome/model_all_folds.safetensors` |
@@ -215,6 +228,10 @@ bash pipeline/run_slurm.sh   # submits all jobs (names compass_*)
 | `atlas.py`, `atlas_summary.py`, `gwas_prep.py` | resolution atlas: near-perfect LD by region, required sample size, panel downsampling, LD clumps, multi-ancestry designs | `atlas_*_summary.json` |
 | `calibration.py`, `calibration_summary.py` | theory against SuSiE with in-sample and reference LD, finite-sample adjustment, effective resolution κ | `calibration.json` |
 | `reporter_direction.py` | direction of reporter effects and haplotype concordance | `reporter_direction.json` |
+| `atlas_design.py`, `atlas_design_summary.py` | per-locus design classes, selection-corrected non-centrality, effective-resolution, heterogeneity and reference-panel sensitivity, partners outside credible sets, bootstrap over individuals, phantom-prone sets | `atlas_design_*_summary.json` |
+| `mpra_v3.py` | reporter-assay result under stricter emVar definitions, inside ENCODE regulatory elements, matched cell types with gene bootstrap, strong-emVar haplotype concordance (ENCODE beds in `data/encode/`) | `mpra_v3.json` |
+| `benchmark_controls.py MODEL` | permuted-score control, effect-size strata, within-set noise correlation, conditional, Mondrian, cohort-split and selection-weighted conformal coverage | `bench_controls_*.json` |
+| `calib_heldout.py` | effective resolution chosen on odd chromosomes and evaluated on even ones | `calib_heldout.json` |
 
 Sequence-model scoring is the most expensive step and runs as eight array tasks per model. All other steps run on CPUs; the atlas and calibration jobs run per chromosome.
 
